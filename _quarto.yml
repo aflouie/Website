@@ -1,0 +1,22 @@
+project:
+  type: website
+  output-dir: docs
+
+website:
+  title: "Allison Louie"
+  navbar:
+    left:
+      - href: index.qmd
+        text: Home
+      - href: PM606Report.html
+        text: Analysis of Environmental Exposures and Childhood BMI
+      - tobacco.qmd
+
+format:
+  html:
+    theme: cosmo
+    css: styles.css
+    toc: true
+
+editor: visual
+

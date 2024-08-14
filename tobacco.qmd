@@ -1,0 +1,139 @@
+---
+title: "Tobacco Quitting Attempts Project"
+---
+
+This research dives into the diverse landscape of tobacco use and quitting attempts across the United States and Guam. Through comprehensive surveys spanning 2011 to 2019, we unravel the complexities of smoking habits and cessation patterns among different demographic groups. The primary goal is to understand how different tobacco user groups, including cigarette smokers, e-cigarette users, and smokeless tobacco consumers, engage in quitting attempts. We aim to uncover trends, success rates, and influencing factors behind these cessation efforts.
+
+By meticulously analyzing survey data from the Behavioral Risk Factor Surveillance System (BRFSS), we reveal intriguing insights. The findings shed light on distinct cessation trends among various user categories, highlighting nuances in quitting behaviors over time and across geographical regions.
+
+These are figures from my project about tobacco use and quitting attempts. My research looked into how different groups (cigarette, e-cigarette, and smokeless tobacco use) attempted to quit smoking and to see who was more successful. It also looked into how among cigarette smokers, who was able to quit and who were classified as "former users."
+
+[Download](~https://github.com/aflouie/PM566Final/raw/main/project.pdf)
+
+```{r setup, include=FALSE}
+library(ggplot2)
+library(plotly)
+library(dplyr, warn.conflicts = FALSE)
+```
+
+```{r, echo=FALSE, warning=FALSE}
+tobacco = read.csv("tobacco.csv")
+tobacco_cleaned <- tobacco %>%
+  filter(!is.na(Data_Value) & !is.na(Response) & !is.na(GeoLocation)) %>%
+  select(YEAR, LocationDesc, TopicDesc, MeasureDesc, Response, Data_Value,     Low_Confidence_Limit, High_Confidence_Limit, Sample_Size, Gender, Race, Age, Education, GeoLocation)
+tobacco_cleaned$YEAR <- factor(tobacco_cleaned$YEAR)
+tobacco_cleaned$LocationDesc <- factor(tobacco_cleaned$LocationDesc)
+tobacco_cleaned$TopicDesc <- factor(tobacco_cleaned$TopicDesc)
+tobacco_cleaned$MeasureDesc <- factor(tobacco_cleaned$MeasureDesc)
+tobacco_cleaned$Response <- factor(tobacco_cleaned$Response)
+tobacco_cleaned$Data_Value <- as.numeric(tobacco_cleaned$Data_Value)
+tobacco_cleaned$Gender <- factor(tobacco_cleaned$Gender)
+tobacco_cleaned$Race <- factor(tobacco_cleaned$Race)
+tobacco_cleaned$Age <- factor(tobacco_cleaned$Age)
+tobacco_cleaned$Education <- factor(tobacco_cleaned$Education)
+tobacco_cleaned <- tobacco_cleaned %>%
+  mutate(
+    lat = as.character(substring(GeoLocation, 2, regexpr(",", GeoLocation) - 1)),
+    lon = as.character(substring(GeoLocation, regexpr(",", GeoLocation) + 2, nchar(GeoLocation) - 1))
+  )
+
+quitting_data <- tobacco %>%
+  filter(
+    TopicDesc == "Cessation (Adults)",
+    (MeasureDesc == "Percent of Former Smokers Among Ever Smokers" | MeasureDesc == "Quit Attempt in Past Year Among Every Day Cigarette Smokers")
+  )
+quitting_data <- quitting_data %>%
+  filter(!is.na(Data_Value) & !is.na(Data_Value_Std_Err) & !is.na(Low_Confidence_Limit) & !is.na(High_Confidence_Limit) & !is.na(GeoLocation)) %>%
+  select(
+    YEAR, 
+    LocationDesc, 
+    LocationAbbr,
+    TopicDesc, 
+    MeasureDesc, 
+    Data_Value, 
+    Data_Value_Std_Err, 
+    Low_Confidence_Limit, 
+    High_Confidence_Limit,
+    Gender,
+    Race,
+    Age,
+    Education,
+    GeoLocation
+  )
+quitting_data <- quitting_data %>%
+  mutate(
+    lat = as.character(substring(GeoLocation, 2, regexpr(",", GeoLocation) - 1)),
+    lon = as.character(substring(GeoLocation, regexpr(",", GeoLocation) + 2, nchar(GeoLocation) - 1))
+  )
+
+
+puerto_rico_data <- tobacco %>%
+  filter(LocationDesc == "Puerto Rico") %>% 
+  select(
+    YEAR, TopicDesc, MeasureDesc, Response, Data_Value, Data_Value_Std_Err, 
+    Low_Confidence_Limit, High_Confidence_Limit, Sample_Size, StratificationID1, 
+    StratificationID2, StratificationID3, StratificationID4, SubMeasureID
+  ) %>%
+  arrange(YEAR, StratificationID1, StratificationID2, StratificationID3, StratificationID4)
+
+former_smokers <- quitting_data%>%
+   mutate(
+    lat = as.numeric(lat),
+    lon = as.numeric(lon))
+former_smokers_avg <- former_smokers %>%
+  group_by(LocationAbbr) %>%
+  summarize(
+    lat = first(lat),
+    lon = first(lon),
+    Overall_Avg_Data_Value = mean(Data_Value, na.rm = TRUE)
+  )
+```
+
+```{r, echo=FALSE, warning=FALSE}
+plot <- plot_ly(data = former_smokers, x = ~Data_Value, type = "histogram") %>%
+  layout(
+    title = "Distribution of Percent of Former Smokers Among Ever Smokers (Cessation Data)",
+    xaxis = list(title = "Data Value"),
+    yaxis = list(title = "Frequency")
+  )
+plot
+```
+
+This is the distribution of the percentage of former smokers among cigarette smokers from the surveys in the data. The data shows that majority of the surveys had between 53-53.9% as their data value in the surveys that identified for former smokers.
+
+```{r, echo=FALSE, warning=FALSE}
+library(plotly)
+hover_text <- with(former_smokers_avg, paste(LocationAbbr, "<br>","Avg Data Value:", Overall_Avg_Data_Value))
+former_smokers_map <- plot_geo(former_smokers_avg, locationmode = "USA-states") %>%
+  add_trace(
+    z = ~Overall_Avg_Data_Value,
+    text = hover_text,
+    locations = ~LocationAbbr,
+    colors = "Blues"
+  ) %>%
+  colorbar(title = "Average Data Value") %>%
+  layout(
+    title = "Average Data Value for Former Smokers across USA",
+    geo = list(scope = "usa")
+  )
+former_smokers_map
+```
+
+This is the average data value in percentage for the surveys that identified former smokers amongst ever smokers all over the country.
+
+```{r, echo=FALSE}
+pr_users_data <- tobacco_cleaned %>%
+  filter(LocationDesc == "Puerto Rico", Response == "Not Current")
+gg_line <- ggplot(data = pr_users_data, aes(x = YEAR, y = Data_Value, color = Sample_Size)) + 
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = Low_Confidence_Limit, ymax = High_Confidence_Limit), width = 0.2) +
+  labs(
+    title = "Tobacco Data for Not Current Respondents in Puerto Rico",
+    x = "Year",
+    y = "Data Value")
+gg_line <- gg_line +
+  scale_color_gradientn(name = "Sample Size", colors = c("red", "blue", "green"))
+ggplotly(gg_line)
+```
+
+This looks at the trend over the years and data values of those who are not current users of smokeless tobacco in Puerto Rico. It compares the error bars of the values to show how they are in comparison to the other samples in over the years.
