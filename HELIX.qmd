@@ -2,4 +2,6 @@
 title: "Analysis of Environmental Exposures and Childhood BMI"
 ---
 
+In this project, I analyzed the impact of postnatal environmental exposures, dietary habits, and metabolomics on childhood BMI Z-scores using data from the Human Early-Life Exposome (HELIX) study. Applied advanced statistical and machine learning techniques, including LASSO, ridge, elastic net, decision tree, random forest, and gradient boosting models, to identify significant predictors of BMI. Found that chemical exposures, such as polychlorinated biphenyls and certain serum metabolites, were more strongly associated with BMI outcomes than dietary factors, highlighting critical factors for early intervention strategies in child health.
+
 [View Full PM606 Report](~/Desktop/Allison/Website/PM606Report.html)
